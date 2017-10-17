@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import cv2
 import time
+import datetime
 import MyDNN
 from dask.array.chunk import keepdims_wrapper
 import csv
@@ -49,8 +50,6 @@ def ShowSampleData(features, labels):
 def DataExploration(y, name):
     result = np.unique(y, return_counts =True)
     assert(len(result[1]) == 43)
-#    print (name)
-#    print(np.vstack((result[0], result[1])).T)
     plt.bar(result[0], result[1], 0.8, color = 'green')
     plt.title('Distribution of classes in '+name, fontsize=10)
     plt.tight_layout()
@@ -162,8 +161,8 @@ def DataAugmentation(features, labels, requiredInstancesPerSign):
     return features, labels
 
 BATCH_SIZE = 128
-EPOCHS = 20
-learningRate = 0.001
+EPOCHS = 50
+learningRate = 0.0001
 
 '''
 Reading the data
@@ -190,40 +189,35 @@ Visualize augmented data
 '''
 DataExploration(labelsTraining, "Training labels after data augmentation")
 
-
-featuresTrainingProcessed = ImageFeaturesPreProcessing(featuresTraining)
-featuresValidationProcessed = ImageFeaturesPreProcessing(featuresValidation)
-featuresTestingProcessed = ImageFeaturesPreProcessing(featuresTesting)
-
-
-
-featuresTrainingNormalized = NormalizeData(featuresTrainingProcessed)
-featuresValidationNormalized = NormalizeData(featuresValidationProcessed)
-featuresTestingNormalized = NormalizeData(featuresTestingProcessed)
+'''
+Preprocess all images
+'''
+featuresTraining = ImageFeaturesPreProcessing(featuresTraining)
+featuresValidation = ImageFeaturesPreProcessing(featuresValidation)
+featuresTesting = ImageFeaturesPreProcessing(featuresTesting)
 
 '''
-index = 31
-image = featuresTraining[1189].squeeze()
-
-plt.figure(figsize=(1, 1))
-plt.imshow(image)
-plt.show()
-print("Training index: ", labelsTraining[index])
+Normalize data
 '''
+featuresTraining = NormalizeData(featuresTraining)
+featuresValidation = NormalizeData(featuresValidation)
+featuresTesting = NormalizeData(featuresTesting)
 
-''' shuffle training data: training data is ordered'''
-featuresTrainingNormalized, labelsTraining = shuffle(featuresTrainingNormalized, labelsTraining)
+
+''' Shuffle training data: training data is ordered'''
+featuresTraining, labelsTraining = shuffle(featuresTraining, labelsTraining)
 
 
 
 x = tf.placeholder(tf.float32, (None, 32, 32, 1))
 y = tf.placeholder(tf.int32, (None))
-keep_prob = tf.placeholder(tf.float32) 
+keep_prob = tf.placeholder(tf.float32)
+
 one_hot_y = tf.one_hot(y, 43)
 
 
 
-logits = MyDNN.MyDNN(x, keep_prob)
+logits = MyDNN.LeNet(x, keep_prob)
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_y, logits=logits)    
 loss_operation = tf.reduce_mean(cross_entropy)
 optimizer = tf.train.AdamOptimizer(learning_rate=learningRate)
@@ -262,7 +256,7 @@ def evaluate(featuresData, labelsData):
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    numberOfDataSets = len(featuresTrainingNormalized)
+    numberOfDataSets = len(featuresTraining)
     
     
     print("Training...")
@@ -270,14 +264,23 @@ with tf.Session() as sess:
     formerValidationAccuracy = 0.0
     maximumValidationAccuracy = 0.0
     for epoch in range(EPOCHS):
-        featuresTrainingNormalized, labelsTraining = shuffle(featuresTrainingNormalized, labelsTraining)
+        featuresTraining, labelsTraining = shuffle(featuresTraining, labelsTraining)
         for offset in range(0, numberOfDataSets, BATCH_SIZE):
             end = offset + BATCH_SIZE
-            batch_x, batch_y = featuresTrainingNormalized[offset:end], labelsTraining[offset:end]
+            batch_x, batch_y = featuresTraining[offset:end], labelsTraining[offset:end]
             sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 0.5})
             
-        currentValidationAccuracy = evaluate(featuresValidationNormalized, labelsValidation)
+        currentValidationAccuracy = evaluate(featuresValidation, labelsValidation)
         formerValidationAccuracy, maximumValidationAccuracy = AccurcayAnalysis(epoch, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
         
-    saver.save(sess, './lenet')
+    #saver.save(sess, './lenet')
     print("Model saved")
+
+with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
+    writer = csv.writer(myfile, delimiter=',')
+    writer.writerow([datetime.datetime.now(), learningRate, BATCH_SIZE, EPOCHS, currentValidationAccuracy*100.0, maximumValidationAccuracy*100.0])
+
+
+
+
+    

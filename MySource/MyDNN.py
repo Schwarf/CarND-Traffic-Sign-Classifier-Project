@@ -7,23 +7,63 @@ Created on Oct 14, 2017
 from tensorflow.contrib.layers import flatten
 import tensorflow as tf
 
+
+
+
+def MyDNN(input, keep_prob):
+    strides = [1,1,1,1]
+    filterWidth = 5
+    filterHeight = filterWidth
+    inputDepth = 1
+    outputDepth = 6
+    relu1 = ReluLayer(input,strides, filterWidth, filterHeight, inputDepth, outputDepth, mu =mu, sigma =sigma)
+    
+    filterSize = 2
+    strideSize = 2
+    padding = 'VALID'
+    maxpool1 = MaxPooling(relu1, filterSize, strideSize, padding)
+    
+    
+    
+
+
 def BiasInitialization(dim):
     return tf.Variable(tf.zeros([dim]))
 
 
-def MyDNN(x, keep_prob):    
+def ConvoltionalLayer(input,strides, filterWidth, filterHeight, inputDepth, outputDepth, mu =0, sigma =0.1):
+    convolutionalWeights = tf.Variable(tf.truncated_normal([filterWidth, filterHeight, inputDepth, outputDepth], mean = mu, stddev =sigma))
+    convolutionalBias = tf.Variable(tf.zeros(outputDepth))
+    return tf.nn.conv2d(input, convolutionalWeights, strides=strides, padding='VALID') + convolutionalBias
+
+def ReluLayer(input,strides, filterWidth, filterHeight, inputDepth, outputDepth, mu =0, sigma =0.1):
+    layer = ConvoltionalLayer(input,strides,filterWidth, filterHeight, inputDepth, outputDepth, mu, sigma)
+    return tf.nn.relu(layer)
+
+def FullyConnectedLayer(input, inputDepth, outputDepth, mu =0, sigma =0.1):
+    filter = [inputDepth, outputDepth]
+    weights = tf.Variable(tf.truncated_normal(filter, mean = mu, stddev =sigma))
+    bias = tf.Variable(tf.zeros(outputDepth))
+    return tf.matmul(input, weights) + bias
+
+
+def MaxPooling(input, filterSize, strideSize, padding):
+    poolingFilter = [1,filterSize, filterSize,1]
+    poolingStrides = [1,strideSize,strideSize,1]
+    return tf.nn.max_pool(input, poolingFilter, poolingStrides, padding)
+
+def LeNet(input, keep_prob):    
     # Arguments used for tf.truncated_normal, randomly defines variables for the weights and biases for each layer
     mu = 0
     sigma = 0.1
     
-    # TODO: Layer 1: Convolutional. Input = 32x32x1. Output = 28x28x6.
+    
+
     weightsLayer1 = tf.Variable(tf.truncated_normal([5, 5, 1, 6], mean = mu, stddev =sigma))
     biasLayer1 = BiasInitialization(6)
     paddingLayer1 = 'VALID'
     stridesLayer1 = [1,1,1,1]
-    layer1 =  tf.nn.conv2d(x,weightsLayer1, stridesLayer1, paddingLayer1) + biasLayer1
-    
-    print(tf.shape(layer1))
+    layer1 =  tf.nn.conv2d(input,weightsLayer1, stridesLayer1, paddingLayer1) + biasLayer1
     # TODO: Activation.
     activation1 = tf.nn.relu(layer1)
     
@@ -61,7 +101,7 @@ def MyDNN(x, keep_prob):
     
     # TODO: Activation.
     activation3 = tf.nn.relu(layer3)
-    activation3 = tf.nn.dropout(activation3, keep_prob)
+    #activation3 = tf.nn.dropout(activation3, keep_prob)
     # TODO: Layer 4: Fully Connected. Input = 120. Output = 84.
     filter4 = [120,84]
     weightsLayer4 = tf.Variable(tf.truncated_normal(filter4, mean = mu, stddev =sigma))
@@ -71,7 +111,7 @@ def MyDNN(x, keep_prob):
    
     # TODO: Activation.
     activation4 = tf.nn.relu(layer4)
-    activation4 = tf.nn.dropout(activation4, keep_prob)
+    #activation4 = tf.nn.dropout(activation4, keep_prob)
    
     # TODO: Layer 5: Fully Connected. Input = 84. Output = 10.
     filter5 = [84,43]
