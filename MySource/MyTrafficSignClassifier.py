@@ -13,6 +13,7 @@ import cv2
 import time
 import datetime
 import MyDNN
+import glob
 from dask.array.chunk import keepdims_wrapper
 import csv
 
@@ -21,6 +22,7 @@ validationFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Proje
 testingFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/Dataset/traffic-signs-data/test.p"
 
 signNamesFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/CarND-Traffic-Sign-Classifier-Project/signnames.csv"
+
 
 def ReadData(file):
     with open(file, mode='rb') as f:
@@ -51,7 +53,7 @@ def DataExploration(y, name):
     result = np.unique(y, return_counts =True)
     assert(len(result[1]) == 43)
     plt.bar(result[0], result[1], 0.8, color = 'green')
-    plt.title('Distribution of classes in '+name, fontsize=10)
+    plt.title('Distribution of instances in '+name, fontsize=10)
     plt.tight_layout()
     #plt.show()
 
@@ -160,9 +162,14 @@ def DataAugmentation(features, labels, requiredInstancesPerSign):
         labels = np.append(labels, newLabels, axis=0)
     return features, labels
 
+
+
+
 BATCH_SIZE = 128
 EPOCHS = 20
 learningRate = 0.001
+  
+
 
 '''
 Reading the data
@@ -209,6 +216,8 @@ featuresTraining, labelsTraining = shuffle(featuresTraining, labelsTraining)
 
 
 
+
+
 x = tf.placeholder(tf.float32, (None, 32, 32, 1))
 y = tf.placeholder(tf.int32, (None))
 keep_prob = tf.placeholder(tf.float32)
@@ -225,8 +234,8 @@ training_operation = optimizer.minimize(loss_operation)
 
 correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(one_hot_y, 1))
 accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-saver = tf.train.Saver()
 
+saver = tf.train.Saver()
 
 def AccuracyAnalysis(epoch, trainingAccuracy ,currentAccuracy, formerAccuracy, maximumAccuracy):
         print("EPOCH {} ...".format(epoch + 1))
@@ -275,7 +284,7 @@ with tf.Session() as sess:
         
         formerValidationAccuracy, maximumValidationAccuracy = AccuracyAnalysis(epoch, currentTrainingAccuracy, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
         
-    saver.save(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/TrafficSignClassifierModel/Model')
+    saver.save(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop')
     print("Model saved")
 
 with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
@@ -284,15 +293,45 @@ with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
 
 
 
+def PredictTestImages(features, session):
+    features = ImageFeaturesPreProcessing(features)
+    features = NormalizeData(features)
+    probabilities = sess.run(tf.nn.softmax(logits), feed_dict={x: features, keep_prob: 1.0}) 
+    top5Probabilities = tf.nn.top_k(probabilities, k=5)
+    predictions = sess.run(tf.argmax(logits, 1), feed_dict={x: features, keep_prob: 1.0})
+    return predictions, session.run(top5Probabilities)
+ 
+
+def ApplyModelToSampleImages(session):
+    sampleImageFiles = [path for path in glob.glob("./Project2/CarND-Traffic-Sign-Classifier-Project/MySource/SampleSigns/*.png")]
+    sampleImages = np.uint8(np.zeros((5,32,32,3)))
+    #saver.restore(session, './Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop')
+    
+    plt.figure(figsize=(8, 8), dpi =80)
+    for index, imageFile in enumerate(sampleImageFiles):
+        image=cv2.imread(imageFile)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        sampleImages[index] = image
+        plt.subplot(3, 2, 1+index)
+        plt.imshow(image)
+        plt.tight_layout()
+        plt.title(index, fontsize = 8)
+    predictions, top5Probabilities = PredictTestImages(sampleImages, session)
+    print ("Predictions")
+    print (predictions)
+    print ("Probabilities")
+    print (top5Probabilities)
+
+#ApplyModelToSampleImages(sess)
+
+
 
 #Run testing
-'''
 with tf.Session() as sess:
-    saver.restore(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/TrafficSignClassifierModel')
-    test_accuracy = evaluate(featuresTesting, labelsTesting)
-    print("Test Accuracy = {:.5f}".format(test_accuracy))
-'''
-
+    saver.restore(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop')
+    #test_accuracy = evaluate(featuresTesting, labelsTesting)
+    #print("Test Accuracy = {:.5f}".format(test_accuracy))
+    ApplyModelToSampleImages(sess)
 
 
     
