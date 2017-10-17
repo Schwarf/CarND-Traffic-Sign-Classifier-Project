@@ -161,8 +161,8 @@ def DataAugmentation(features, labels, requiredInstancesPerSign):
     return features, labels
 
 BATCH_SIZE = 128
-EPOCHS = 50
-learningRate = 0.0001
+EPOCHS = 20
+learningRate = 0.001
 
 '''
 Reading the data
@@ -228,16 +228,17 @@ accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 saver = tf.train.Saver()
 
 
-def AccurcayAnalysis(epoch, currentAccuracy, formerAccuracy, maximumAccuracy):
+def AccuracyAnalysis(epoch, trainingAccuracy ,currentAccuracy, formerAccuracy, maximumAccuracy):
         print("EPOCH {} ...".format(epoch + 1))
+        print("Training Accuracy [%] = {:.5f}".format(trainingAccuracy*100.0))
         print("Validation Accuracy [%] = {:.5f}".format(currentAccuracy*100.0))
         if(currentAccuracy > maximumAccuracy):
             maximumAccuracy = currentAccuracy
 
         if(formerAccuracy > 0.0):
-            print("Relative change of accuracy [%] = {:.5f}".format((currentAccuracy - formerAccuracy)/formerAccuracy*100.0))
+            print("Relative change of validation accuracy [%] = {:.5f}".format((currentAccuracy - formerAccuracy)/formerAccuracy*100.0))
         if(maximumAccuracy > 0.0):
-            print("Current accuracy in terms of maximum accuracy = {:.5f}".format(currentAccuracy/maximumAccuracy))
+            print("Current validation accuracy in terms of maximum validation accuracy = {:.5f}".format(currentAccuracy/maximumAccuracy))
         print()
         formerAccuracy = currentAccuracy
         return formerAccuracy, maximumAccuracy
@@ -269,17 +270,28 @@ with tf.Session() as sess:
             end = offset + BATCH_SIZE
             batch_x, batch_y = featuresTraining[offset:end], labelsTraining[offset:end]
             sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 0.5})
-            
         currentValidationAccuracy = evaluate(featuresValidation, labelsValidation)
-        formerValidationAccuracy, maximumValidationAccuracy = AccurcayAnalysis(epoch, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
+        currentTrainingAccuracy = evaluate(featuresTraining, labelsTraining)
         
-    #saver.save(sess, './lenet')
+        formerValidationAccuracy, maximumValidationAccuracy = AccuracyAnalysis(epoch, currentTrainingAccuracy, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
+        
+    saver.save(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/TrafficSignClassifierModel/Model')
     print("Model saved")
 
 with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
     writer = csv.writer(myfile, delimiter=',')
     writer.writerow([datetime.datetime.now(), learningRate, BATCH_SIZE, EPOCHS, currentValidationAccuracy*100.0, maximumValidationAccuracy*100.0])
 
+
+
+
+#Run testing
+'''
+with tf.Session() as sess:
+    saver.restore(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/TrafficSignClassifierModel')
+    test_accuracy = evaluate(featuresTesting, labelsTesting)
+    print("Test Accuracy = {:.5f}".format(test_accuracy))
+'''
 
 
 

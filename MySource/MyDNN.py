@@ -101,7 +101,7 @@ def LeNet(input, keep_prob):
     
     # TODO: Activation.
     activation3 = tf.nn.relu(layer3)
-    #activation3 = tf.nn.dropout(activation3, keep_prob)
+    activation3 = tf.nn.dropout(activation3, keep_prob)
     # TODO: Layer 4: Fully Connected. Input = 120. Output = 84.
     filter4 = [120,84]
     weightsLayer4 = tf.Variable(tf.truncated_normal(filter4, mean = mu, stddev =sigma))
@@ -111,7 +111,7 @@ def LeNet(input, keep_prob):
    
     # TODO: Activation.
     activation4 = tf.nn.relu(layer4)
-    #activation4 = tf.nn.dropout(activation4, keep_prob)
+    activation4 = tf.nn.dropout(activation4, keep_prob)
    
     # TODO: Layer 5: Fully Connected. Input = 84. Output = 10.
     filter5 = [84,43]
