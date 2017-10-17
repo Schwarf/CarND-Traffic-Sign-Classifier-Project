@@ -70,17 +70,6 @@ def ConvertHSVImageToGrayColorSpace(image):
 def ConvertBGRImageToGrayColorSpace(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-def RemoveNoiseFromImage(image, imageWeight1, noiseWeight2):
-    noise = ApplyGaussianSmoothing(image)
-    return cv2.addWeighted(image, imageWeight1, noise, noiseWeight2, 0) 
-
-def RemoveNoiseFromImage2(image):
-    kernel = np.ones((5,5),np.uint8)
-    return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
-
-def FastRemoveNoiseFromImage(image):
-    res = cv2.fastNlMeansDenoising(image, None, 30.0,5,3)
-    return res
 
 def ConvertImageToHSVSpace(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
