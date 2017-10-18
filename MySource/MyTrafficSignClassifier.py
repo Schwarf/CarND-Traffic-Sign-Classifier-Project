@@ -205,7 +205,7 @@ def DataAugmentation(features, labels, requiredInstancesPerSign):
 
 
 BATCH_SIZE = 128
-EPOCHS = 50
+EPOCHS = 20
 learningRate = 0.001
   
 
@@ -302,36 +302,6 @@ def evaluate(featuresData, labelsData):
         total_accuracy += (accuracy * len(batch_x))
     return total_accuracy / numberOfDataSets
 
-
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    numberOfDataSets = len(featuresTraining)
-    
-    
-    print("Training...")
-    print()
-    formerValidationAccuracy = 0.0
-    maximumValidationAccuracy = 0.0
-    for epoch in range(EPOCHS):
-        featuresTraining, labelsTraining = shuffle(featuresTraining, labelsTraining)
-        for offset in range(0, numberOfDataSets, BATCH_SIZE):
-            end = offset + BATCH_SIZE
-            batch_x, batch_y = featuresTraining[offset:end], labelsTraining[offset:end]
-            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 0.5})
-        currentValidationAccuracy = evaluate(featuresValidation, labelsValidation)
-        currentTrainingAccuracy = evaluate(featuresTraining, labelsTraining)
-        
-        formerValidationAccuracy, maximumValidationAccuracy = AccuracyAnalysis(epoch, currentTrainingAccuracy, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
-        
-    saver.save(sess, './MiscModel')
-    print("Model saved")
-
-with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
-    writer = csv.writer(myfile, delimiter=',')
-    writer.writerow([datetime.datetime.now(), learningRate, BATCH_SIZE, EPOCHS, currentValidationAccuracy*100.0, maximumValidationAccuracy*100.0])
-
-
-
 def PredictTestImages(features, session):
     features = ImageFeaturesPreProcessing(features)
     features = NormalizeData(features)
@@ -358,10 +328,7 @@ def ApplyModelToSampleImages(session):
         image=cv2.imread(imageFile)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         sampleImages[index] = image
-#        plt.subplot(3, 2, 1+index)
-#        plt.imshow(image)
-#        plt.tight_layout()
-#        plt.title(index, fontsize = 8)
+
     predictions, top5Probabilities = PredictTestImages(sampleImages, session)
     plt.figure(figsize=(20, 22), dpi=80)
     for i in range(imageCount):
@@ -379,12 +346,30 @@ def ApplyModelToSampleImages(session):
     plt.show()
 
 
-
-#Run testing
 with tf.Session() as sess:
-    saver.restore(sess, './MiscModel')
-    #test_accuracy = evaluate(featuresTesting, labelsTesting)
-    #print("Test Accuracy = {:.5f}".format(test_accuracy))
+    sess.run(tf.global_variables_initializer())
+    numberOfDataSets = len(featuresTraining)
+    
+    
+    print("Training...")
+    print()
+    formerValidationAccuracy = 0.0
+    maximumValidationAccuracy = 0.0
+    for epoch in range(EPOCHS):
+        featuresTraining, labelsTraining = shuffle(featuresTraining, labelsTraining)
+        for offset in range(0, numberOfDataSets, BATCH_SIZE):
+            end = offset + BATCH_SIZE
+            batch_x, batch_y = featuresTraining[offset:end], labelsTraining[offset:end]
+            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob: 0.5})
+        currentValidationAccuracy = evaluate(featuresValidation, labelsValidation)
+        currentTrainingAccuracy = evaluate(featuresTraining, labelsTraining)
+        
+        formerValidationAccuracy, maximumValidationAccuracy = AccuracyAnalysis(epoch, currentTrainingAccuracy, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
+        
+    saver.save(sess, './MiscModel')
+    print("Model saved")
+    test_accuracy = evaluate(featuresTesting, labelsTesting)
+    print("Test Accuracy = {:.5f}".format(test_accuracy))
     ApplyModelToSampleImages(sess)
 
 

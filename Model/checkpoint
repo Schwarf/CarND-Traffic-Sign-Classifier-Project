@@ -1,2 +1,2 @@
-model_checkpoint_path: "LeNetWithDrop"
-all_model_checkpoint_paths: "LeNetWithDrop"
+model_checkpoint_path: "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop"
+all_model_checkpoint_paths: "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop"
