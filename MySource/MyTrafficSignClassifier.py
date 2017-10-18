@@ -127,13 +127,52 @@ def ApplyImageTranslation(image, translation):
     translationMatrix = np.float32([[1,0,translation[0]],[0,1,translation[1]]])
     return cv2.warpAffine(image,translationMatrix,(image.shape[0],image.shape[1]))
     
+def ApplyImageRescaling(image, scalingFactor):
+    imageWidth = image.shape[0]
+    imageHeight = image.shape[1]
+    newImage = cv2.resize(image,(0,0), fx=scalingFactor, fy=scalingFactor)
+    newImageWidth = newImage.shape[0]
+    diffWidth = imageWidth-newImageWidth
+    # No scaling applied
+    if(diffWidth ==0):
+        newImage = image
+    #New image is smaller than original, take black image and copy new image into the black one
+    elif(diffWidth > 0):
+        blankImage = np.zeros((imageWidth,imageHeight,3), np.uint8)
+        maxOffset = diffWidth
+        offsetWidth = np.random.randint(0,maxOffset)
+        offsetHeight = np.random.randint(0,maxOffset)
+        blankImage[offsetWidth:offsetWidth+newImageWidth, offsetHeight:offsetHeight+newImageWidth] = newImage
+        newImage = blankImage
+    #New image is larger than original, take a random part
+    else:
+        maxOffset = -diffWidth
+        offsetWidth = np.random.randint(0,maxOffset)
+        offsetHeight = np.random.randint(0,maxOffset)
+        newImage = newImage[offsetWidth:offsetWidth+imageWidth, offsetHeight:offsetHeight+imageWidth]
+    
+    assert(newImage.shape == image.shape)
+    return newImage
+    
+    
 def TransformImage(image):
     angle = np.random.uniform(-15,15)
     translation = np.random.randint(-2,2,2)
+    scalingFactor = np.random.uniform(0.8,1.2)
+
     rotatedImage = ApplyImageRotation(image, angle)
     translatedImage = ApplyImageTranslation(rotatedImage, translation)
-    return translatedImage
+    scaledImage = ApplyImageRescaling(translatedImage, scalingFactor)
+    return scaledImage
       
+    #cv2.imshow('frame', newImage)
+    #if cv2.waitKey(1000) & 0xFF == ord('q'):
+    #    exit()
+    #cv2.imshow('frame', scaledImage)
+    #if cv2.waitKey(1000) & 0xFF == ord('q'):
+    #    exit()
+
+
 
 def GenerateNewData(numberOfDataSets, underlyingImages, assignedLabel):
     generatedImageSamples = np.random.randint(len(underlyingImages), size = numberOfDataSets)
@@ -166,7 +205,7 @@ def DataAugmentation(features, labels, requiredInstancesPerSign):
 
 
 BATCH_SIZE = 128
-EPOCHS = 20
+EPOCHS = 50
 learningRate = 0.001
   
 
@@ -284,7 +323,7 @@ with tf.Session() as sess:
         
         formerValidationAccuracy, maximumValidationAccuracy = AccuracyAnalysis(epoch, currentTrainingAccuracy, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
         
-    saver.save(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop')
+    saver.save(sess, './MiscModel')
     print("Model saved")
 
 with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
@@ -303,32 +342,47 @@ def PredictTestImages(features, session):
  
 
 def ApplyModelToSampleImages(session):
-    sampleImageFiles = [path for path in glob.glob("./Project2/CarND-Traffic-Sign-Classifier-Project/MySource/SampleSigns/*.png")]
-    sampleImages = np.uint8(np.zeros((5,32,32,3)))
+    sampleImageFiles = [path for path in glob.glob("./Project2/CarND-Traffic-Sign-Classifier-Project/SampleSigns/*.png")]
+    imageCount = len(sampleImageFiles)
+    sampleImages = np.uint8(np.zeros((imageCount,32,32,3)))
     #saver.restore(session, './Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop')
     
-    plt.figure(figsize=(8, 8), dpi =80)
+    labelNames = {}
+    with open(signNamesFile, mode='r') as csvfile:
+        csvReader = csv.reader(csvfile, delimiter=',')
+        for row in csvReader:
+            if row[0].isdigit():
+                labelNames[int(row[0])] = row[1]
+
     for index, imageFile in enumerate(sampleImageFiles):
         image=cv2.imread(imageFile)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         sampleImages[index] = image
-        plt.subplot(3, 2, 1+index)
-        plt.imshow(image)
-        plt.tight_layout()
-        plt.title(index, fontsize = 8)
+#        plt.subplot(3, 2, 1+index)
+#        plt.imshow(image)
+#        plt.tight_layout()
+#        plt.title(index, fontsize = 8)
     predictions, top5Probabilities = PredictTestImages(sampleImages, session)
-    print ("Predictions")
-    print (predictions)
-    print ("Probabilities")
-    print (top5Probabilities)
-
-#ApplyModelToSampleImages(sess)
+    plt.figure(figsize=(20, 22), dpi=80)
+    for i in range(imageCount):
+        plt.subplot(imageCount, 2, 2*i+1)
+        plt.imshow(sampleImages[i]) 
+        title = sampleImageFiles[i].split('\\')[-1].split('.')[0]
+        title = ''.join([char for char in title if not char.isdigit()])
+        title = "The correct label: " + title + " Predicted: " + labelNames[predictions[i]]
+        plt.title(title, color ='red', weight = 'bold', fontsize = 8)
+        plt.axis('off')
+        plt.subplot(imageCount, 2, 2*i+2)
+        plt.barh(np.arange(1, 6, 1), top5Probabilities.values[i, :])
+        labs=[labelNames[j] for j in top5Probabilities.indices[i]]
+        plt.yticks(np.arange(1, 6, 1), labs)
+    plt.show()
 
 
 
 #Run testing
 with tf.Session() as sess:
-    saver.restore(sess, './Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop')
+    saver.restore(sess, './MiscModel')
     #test_accuracy = evaluate(featuresTesting, labelsTesting)
     #print("Test Accuracy = {:.5f}".format(test_accuracy))
     ApplyModelToSampleImages(sess)
