@@ -368,9 +368,20 @@ with tf.Session() as sess:
         
     saver.save(sess, './MiscModel')
     print("Model saved")
-    test_accuracy = evaluate(featuresTesting, labelsTesting)
-    print("Test Accuracy = {:.5f}".format(test_accuracy))
-    ApplyModelToSampleImages(sess)
+
+with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
+    writer = csv.writer(myfile, delimiter=',')
+    writer.writerow([datetime.datetime.now(), learningRate, BATCH_SIZE, EPOCHS, currentValidationAccuracy*100.0, maximumValidationAccuracy*100.0])
+
+
+
+
+
+
+#Run testing
+test_accuracy = evaluate(featuresTesting, labelsTesting)
+print("Test Accuracy = {:.5f}".format(test_accuracy))
+ApplyModelToSampleImages(sess)
 
 
     
