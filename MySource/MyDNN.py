@@ -13,16 +13,29 @@ import tensorflow as tf
 def MyDNN(input, keep_prob):
     mu = 0
     sigma = 0.1
+
+    
     #print ("input shape ", input.shape)
-    weightsLayer1 = tf.Variable(tf.truncated_normal([5, 5, 1, 64], mean = mu, stddev =sigma))
+    weightsLayer0 = tf.Variable(tf.truncated_normal([5, 5, 1, 32], mean = mu, stddev =sigma))
+    biasLayer0 = BiasInitialization(32)
+    paddingLayer0 = 'VALID'
+    stridesLayer0 = [1,1,1,1]
+    layer0 =  tf.nn.conv2d(input,weightsLayer0, stridesLayer0, paddingLayer0) + biasLayer0
+    # TODO: Activation.
+    #print ("Layer1 ", layer1.shape)
+    activation0 = tf.nn.relu(layer0)
+    
+    #print ("input shape ", input.shape)
+    weightsLayer1 = tf.Variable(tf.truncated_normal([5, 5, 32, 64], mean = mu, stddev =sigma))
     biasLayer1 = BiasInitialization(64)
     paddingLayer1 = 'VALID'
     stridesLayer1 = [1,1,1,1]
-    layer1 =  tf.nn.conv2d(input,weightsLayer1, stridesLayer1, paddingLayer1) + biasLayer1
+    layer1 =  tf.nn.conv2d(activation0,weightsLayer1, stridesLayer1, paddingLayer1) + biasLayer1
     # TODO: Activation.
     #print ("Layer1 ", layer1.shape)
     activation1 = tf.nn.relu(layer1)
-    
+
+
     
     # TODO: Pooling. Input = 28x28x6. Output = 14x14x6.
     filterPooling1 = [1,2,2,1]
@@ -54,7 +67,7 @@ def MyDNN(input, keep_prob):
     
     # TODO: Layer 3: Fully Connected. Input = 400. Output = 120.
     
-    filter3 = [3200,200]
+    filter3 = [2048,200]
     weightsLayer3 = tf.Variable(tf.truncated_normal(filter3, mean = mu, stddev =sigma))
     biasLayer3 = BiasInitialization(200)
     layer3 = tf.matmul(flatten1, weightsLayer3) + biasLayer3
