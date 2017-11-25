@@ -13,8 +13,6 @@ import tensorflow as tf
 def MyDNN(input, keep_prob):
     mu = 0
     sigma = 0.1
-    
-    
     #print ("input shape ", input.shape)
     weightsLayer1 = tf.Variable(tf.truncated_normal([5, 5, 1, 64], mean = mu, stddev =sigma))
     biasLayer1 = BiasInitialization(64)
