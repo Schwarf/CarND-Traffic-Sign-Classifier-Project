@@ -20,7 +20,7 @@ import csv
 trainingFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/Dataset/traffic-signs-data/train.p"
 validationFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/Dataset/traffic-signs-data/valid.p"
 testingFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/Dataset/traffic-signs-data/test.p"
-
+modelFile = 'D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/CarND-Traffic-Sign-Classifier-Project/Model/LeNetWithDrop'
 signNamesFile = "D:/Andreas/Programming/Python/UdacitySelfDrivingCar/Term1Projects/Project2/CarND-Traffic-Sign-Classifier-Project/signnames.csv"
 
 
@@ -127,6 +127,16 @@ def ApplyImageTranslation(image, translation):
     translationMatrix = np.float32([[1,0,translation[0]],[0,1,translation[1]]])
     return cv2.warpAffine(image,translationMatrix,(image.shape[0],image.shape[1]))
     
+
+def ApplyImageShearing(image, shear_range):
+    rows,cols,ch = image.shape    
+    pts1 = np.float32([[5,5],[20,5],[5,20]])
+    pt1 = 5+shear_range*np.random.uniform()-shear_range/2
+    pt2 = 20+shear_range*np.random.uniform()-shear_range/2
+    pts2 = np.float32([[pt1,5],[pt2,pt1],[5,pt2]])
+    shear_M = cv2.getAffineTransform(pts1,pts2)
+    return cv2.warpAffine(image,shear_M,(cols,rows))
+
 def ApplyImageRescaling(image, scalingFactor):
     imageWidth = image.shape[0]
     imageHeight = image.shape[1]
@@ -154,15 +164,35 @@ def ApplyImageRescaling(image, scalingFactor):
     assert(newImage.shape == image.shape)
     return newImage
     
-    
-def TransformImage(image):
-    angle = np.random.uniform(-15,15)
-    translation = np.random.randint(-2,2,2)
-    scalingFactor = np.random.uniform(0.8,1.2)
+def ApplyRandomBrightness(image, randomFactor):
+    image1 = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
+    #print("before", image1[1,1,2], " ", randomFactor)
+    gray = image1[:,:,2]
+    if(randomFactor > 0 ):
+        image1[:,:,2] =  np.where(255 < (randomFactor + gray),255,gray+randomFactor)
+    else:
+        image1[:,:,2] =  np.where(0 > (randomFactor + gray),0 ,gray+randomFactor)
+    #print("after", image1[1,1,2])
+    image1 = cv2.cvtColor(image1,cv2.COLOR_HSV2BGR)
+    return image1
 
+
+
+def TransformImage(image):
+    angle = np.random.uniform(-20,20)
+    translation = np.random.randint(-5,5,2)
+    scalingFactor = np.random.uniform(0.8,1.2)
+    brightnessFactor = np.random.randint(-5,5)
+    #print (brightnessFactor)
+
+    
     rotatedImage = ApplyImageRotation(image, angle)
     translatedImage = ApplyImageTranslation(rotatedImage, translation)
     scaledImage = ApplyImageRescaling(translatedImage, scalingFactor)
+    shearedImage = ApplyImageShearing(scaledImage, 10)
+    brightendImage = ApplyRandomBrightness(shearedImage, brightnessFactor)
+    
+    
     return scaledImage
       
     #cv2.imshow('frame', newImage)
@@ -265,7 +295,7 @@ one_hot_y = tf.one_hot(y, 43)
 
 
 
-logits = MyDNN.LeNet(x, keep_prob)
+logits = MyDNN.MyDNN(x, keep_prob)
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_y, logits=logits)    
 loss_operation = tf.reduce_mean(cross_entropy)
 optimizer = tf.train.AdamOptimizer(learning_rate=learningRate)
@@ -366,22 +396,17 @@ with tf.Session() as sess:
         
         formerValidationAccuracy, maximumValidationAccuracy = AccuracyAnalysis(epoch, currentTrainingAccuracy, currentValidationAccuracy, formerValidationAccuracy, maximumValidationAccuracy)
         
-    saver.save(sess, './MiscModel')
+    saver.save(sess, modelFile)
     print("Model saved")
 
-with open("TrafficSignClassifierLeNetData.csv", "a") as myfile:
-    writer = csv.writer(myfile, delimiter=',')
-    writer.writerow([datetime.datetime.now(), learningRate, BATCH_SIZE, EPOCHS, currentValidationAccuracy*100.0, maximumValidationAccuracy*100.0])
-
-
-
-
-
-
 #Run testing
-test_accuracy = evaluate(featuresTesting, labelsTesting)
-print("Test Accuracy = {:.5f}".format(test_accuracy))
-ApplyModelToSampleImages(sess)
+with tf.Session() as sess:
+    saver.restore(sess, modelFile)
+    test_accuracy = evaluate(featuresTesting, labelsTesting)
+    print("Accuracy for testing = {:.5f}".format(test_accuracy))
+
+
+
 
 
     
